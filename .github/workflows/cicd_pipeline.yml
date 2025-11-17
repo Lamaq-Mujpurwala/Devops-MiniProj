@@ -32,15 +32,12 @@ jobs:
   deploy_to_huggingface:
     name: Deploy to HuggingFace
     runs-on: ubuntu-latest
-    # This job depends on the 'code_scan' job finishing successfully
     needs: code_scan
     steps:
       - uses: actions/checkout@v3
         with:
-          # We need to fetch all history for the push
           fetch-depth: 0
-          # We need LFS for the .pkl model file
-          lfs: true
+          lfs: true # <-- This is important
 
       - name: Push to Hugging Face Hub
         env:
@@ -51,33 +48,31 @@ jobs:
           echo "Setting up Git LFS..."
           git lfs install
           
+          echo "Pulling LFS files..."
+          # --- THIS IS THE NEW, CRITICAL COMMAND ---
+          # This forces git to download the *real* .pkl file
+          git lfs pull
+          # ----------------------------------------
+          
           echo "Cloning HuggingFace Space: ${SPACE_NAME}"
-          # Clone the space repo into a subdirectory named after the space
           git clone "https://OAuth:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/${SPACE_NAME}" "${SPACE_NAME}"
           
           echo "Syncing project files to cloned repo..."
-          # THIS IS THE CORRECTED COMMAND
-          # We copy from the current dir (.) to the cloned dir (${SPACE_NAME}/)
-          # We exclude the .git, .github, and the destination dir itself
           rsync -av --delete --exclude=".git*" --exclude=".github*" --exclude="${SPACE_NAME}" . ./${SPACE_NAME}/
           
-          # Change directory into the cloned repo
           cd "${SPACE_NAME}"
           echo "Inside cloned repo directory."
 
-          # Set up Git user for the commit
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
           
           echo "Tracking .pkl files with LFS..."
-          # Explicitly track the .pkl file with LFS
           git lfs track "*.pkl"
           git add .gitattributes
           
           echo "Adding all changes..."
           git add .
           
-          # Check if there are changes to commit
           if ! git diff-index --quiet HEAD; then
             echo "Changes detected, committing and pushing..."
             git commit -m "Deploy from GitHub Actions (commit: ${GITHUB_SHA})"
