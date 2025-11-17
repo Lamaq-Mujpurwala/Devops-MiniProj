@@ -48,27 +48,43 @@ jobs:
           SPACE_NAME: ${{ secrets.SPACE_NAME }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          # Clone the space repo into a subdirectory
+          echo "Setting up Git LFS..."
+          git lfs install
+          
+          echo "Cloning HuggingFace Space: ${SPACE_NAME}"
+          # Clone the space repo into a subdirectory named after the space
           git clone "https://OAuth:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/${SPACE_NAME}" "${SPACE_NAME}"
-
-          # Copy our app files into the space repo
-          # -a to archive, -v for verbose, --delete to remove old files
-          rsync -av --delete --exclude=".git*" --exclude=".github*" ./${SPACE_NAME}/
-
+          
+          echo "Syncing project files to cloned repo..."
+          # THIS IS THE CORRECTED COMMAND
+          # We copy from the current dir (.) to the cloned dir (${SPACE_NAME}/)
+          # We exclude the .git, .github, and the destination dir itself
+          rsync -av --delete --exclude=".git*" --exclude=".github*" --exclude="${SPACE_NAME}" . ./${SPACE_NAME}/
+          
+          # Change directory into the cloned repo
           cd "${SPACE_NAME}"
+          echo "Inside cloned repo directory."
 
-          # Add and commit all changes
+          # Set up Git user for the commit
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
+          
+          echo "Tracking .pkl files with LFS..."
+          # Explicitly track the .pkl file with LFS
+          git lfs track "*.pkl"
+          git add .gitattributes
+          
+          echo "Adding all changes..."
           git add .
-
+          
           # Check if there are changes to commit
           if ! git diff-index --quiet HEAD; then
-            git commit -m "Deploy from GitHub Actions"
+            echo "Changes detected, committing and pushing..."
+            git commit -m "Deploy from GitHub Actions (commit: ${GITHUB_SHA})"
             git push
             echo "Changes pushed to HuggingFace."
           else
-            echo "No changes to deploy."
+            echo "No file changes detected, nothing to push."
           fi
 
   # Job 3: Run the Selenium Smoke Test
@@ -79,7 +95,7 @@ jobs:
     needs: deploy_to_huggingface
     steps:
       - uses: actions/checkout@v3
-
+      
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -89,7 +105,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y google-chrome-stable
-
+      
       - name: Install ChromeDriver
         run: |
           CHROME_VERSION=$(google-chrome --version | cut -d ' ' -f 3 | cut -d '.' -f 1)
@@ -108,7 +124,7 @@ jobs:
         run: |
           echo "Waiting 60 seconds for HuggingFace to build the new container..."
           sleep 60
-
+          
       - name: Run Selenium Test
         env:
           APP_URL: ${{ secrets.APP_URL }}
