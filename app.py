@@ -2,17 +2,21 @@ import os
 import pandas as pd
 from flask import Flask, request, render_template, redirect, url_for
 from pycaret.classification import load_model, predict_model
+import traceback 
 
 # Initialize the Flask app
 app = Flask(__name__)
 
 # Load the trained model
-# This assumes 'diabetes_model.pkl' is in the same directory
 try:
     model = load_model('diabetes_model')
     print("Model loaded successfully.")
 except Exception as e:
-    print(f"Error loading model: {e}")
+    print("=====!! ERROR LOADING MODEL !!=====")
+    print(f"An exception occurred: {e}")
+    print("Full traceback:")
+    print(traceback.format_exc())
+    print("===================================")
     model = None
 
 # Define the home route
@@ -25,7 +29,8 @@ def home():
 @app.route('/predict', methods=['POST'])
 def predict():
     if model is None:
-        return "Error: Model not loaded.", 500
+        # This is the error the user sees
+        return "Error: Model not loaded. Check application logs for details.", 500
 
     try:
         # Get data from the HTML form
@@ -48,8 +53,13 @@ def predict():
         # Make predictions
         prediction = predict_model(model, data=input_df)
         
-        # Get the 'Label' from the prediction (1 = Diabetes, 0 = No Diabetes)
-        output = prediction['Label'].iloc[0]
+        # --- FIX and DEBUGGING ---
+        # Add this line to see all available columns in the log
+        print(f"Prediction DataFrame columns: {prediction.columns}")
+        
+        # THE FIX: Change 'Label' to 'prediction_label'
+        output = prediction['prediction_label'].iloc[0]
+        # --- END FIX ---
         
         result_text = "High Risk of Diabetes" if output == 1 else "Low Risk of Diabetes"
 
@@ -59,8 +69,13 @@ def predict():
         return render_template('index.html', prediction_text=f'Prediction: {result_text}')
 
     except Exception as e:
-        print(f"Prediction error: {e}")
-        return render_template('index.html', prediction_text=f'Error: {e}')
+        print(f"=====!! PREDICTION ERROR !!=====")
+        print(f"An exception occurred: {e}")
+        print("Full traceback:")
+        print(traceback.format_exc())
+        print("================================")
+        # This is what's happening now
+        return render_template('index.html', prediction_text=f"ERROR: '{e}'")
 
 if __name__ == '__main__':
     # HuggingFace Spaces sets the PORT environment variable
