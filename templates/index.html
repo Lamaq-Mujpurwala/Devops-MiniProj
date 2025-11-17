@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Diabetes Prediction</title>
+        <style>
+            body { font-family: 'Inter', sans-serif; display: grid; place-items: center; min-height: 100vh; background-color: #f4f7f6; color: #333; }
+            form { background: #fff; padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); width: 100%; max-width: 500px; }
+            h1 { text-align: center; color: #2a2a2a; margin-top: 0; }
+            div { margin-bottom: 1.25rem; }
+            label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: #555; }
+            input { width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
+            button { width: 100%; padding: 0.85rem; background-color: #007aff; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: background-color 0.2s; }
+            button:hover { background-color: #0056b3; }
+            h2 { text-align: center; margin-top: 2rem; font-size: 1.5rem; color: #007aff; }
+        </style>
+        <!-- Load the Inter font -->
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    </head>
+    <body>
+        <form action="{{ url_for('predict') }}" method="post">
+            <h1>Diabetes Risk Predictor</h1>
+            
+            <div>
+                <label for="pregnant">Pregnancies:</label>
+                <input type="number" id="pregnant" name="pregnant" value="0" required>
+            </div>
+            <div>
+                <label for="glucose">Glucose:</label>
+                <input type="number" id="glucose" name="glucose" value="120" required>
+            </div>
+            <div>
+                <label for="bp">Blood Pressure:</label>
+                <input type="number" id="bp" name="bp" value="70" required>
+            </div>
+            <div>
+                <label for="skin">Skin Thickness:</label>
+                <input type="number" id="skin" name="skin" value="20" required>
+            </div>
+            <div>
+                <label for="insulin">Insulin:</label>
+                <input type="number" id="insulin" name="insulin" value="79" required>
+            </div>
+            <div>
+                <label for="bmi">BMI:</label>
+                <input type="number" step="0.1" id="bmi" name="bmi" value="32.0" required>
+            </div>
+            <div>
+                <label for="pedigree">Diabetes Pedigree Function:</label>
+                <input type="number" step="0.01" id="pedigree" name="pedigree" value="0.47" required>
+            </div>
+            <div>
+                <label for="age">Age:</label>
+                <input type="number" id="age" name="age" value="33" required>
+            </div>
+
+            <button type="submit">Predict</button>
+        </form>
+
+        <!-- This is where the prediction result will be shown -->
+        <h2 id="prediction_result">
+            {{ prediction_text }}
+        </h2>
+    </body>
+    </html>
