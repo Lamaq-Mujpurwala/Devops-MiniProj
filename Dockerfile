@@ -1,4 +1,11 @@
+# Use an official Python runtime as a parent image
 FROM python:3.9-slim
+
+# --- NEW COMMANDS ---
+# Install the missing system library (libgomp.so.1)
+# This is needed for scikit-learn/pycaret
+RUN apt-get update && apt-get install -y libgomp1
+# --- END NEW COMMANDS ---
 
 # Set the working directory in the container
 WORKDIR /app
