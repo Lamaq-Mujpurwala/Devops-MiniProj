@@ -58,6 +58,7 @@ jobs:
   smoke_test:
     name: Smoke Test
     runs-on: ubuntu-latest
+    # This job depends on the 'deploy_to_huggingface' job
     needs: deploy_to_huggingface
     steps:
       - uses: actions/checkout@v3
@@ -67,23 +68,14 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Install Google Chrome
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable
+      # --- REMOVED THE MANUAL "Install Google Chrome" STEP ---
       
-      - name: Install ChromeDriver
-        run: |
-          CHROME_VERSION=$(google-chrome --version | cut -d ' ' -f 3 | cut -d '.' -f 1)
-          DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}")
-          wget -q "https://chromedriver.storage.googleapis.com/${DRIVER_VERSION}/chromedriver_linux64.zip"
-          unzip chromedriver_linux64.zip
-          sudo mv chromedriver /usr/local/bin/
-          sudo chmod +x /usr/local/bin/chromedriver
+      # --- REMOVED THE MANUAL "Install ChromeDriver" STEP ---
 
       - name: Install Selenium and other dependencies
         run: |
-          pip install selenium
+          # We add webdriver-manager here
+          pip install selenium webdriver-manager
           pip install -r requirements.txt
 
       - name: Wait for HuggingFace Space to build

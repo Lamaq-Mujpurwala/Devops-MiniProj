@@ -6,6 +6,11 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+# --- NEW IMPORTS ---
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+# --- END NEW IMPORTS ---
+
 # Get the URL of the deployed app from the environment variable
 APP_URL = os.environ.get("APP_URL")
 
@@ -21,8 +26,21 @@ chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.add_argument("--window-size=1920,1080")
 
-driver = webdriver.Chrome(options=chrome_options)
-print("WebDriver initialized.")
+# --- UPDATED DRIVER INITIALIZATION ---
+# Use webdriver-manager to automatically download and set up the correct driver
+print("Initializing WebDriver with webdriver-manager...")
+try:
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    print("WebDriver initialized successfully.")
+except Exception as driver_init_error:
+    print(f"=====!! ERROR INITIALIZING WEBDRIVER !!=====")
+    print(f"An exception occurred: {driver_init_error}")
+    print(traceback.format_exc())
+    print("============================================")
+    raise driver_init_error
+# --- END UPDATED INITIALIZATION ---
+
 
 try:
     driver.get(APP_URL)
@@ -69,5 +87,6 @@ except Exception as e:
     raise e
 
 finally:
-    driver.quit()
-    print("WebDriver closed.")
+    if 'driver' in locals():
+        driver.quit()
+        print("WebDriver closed.")
