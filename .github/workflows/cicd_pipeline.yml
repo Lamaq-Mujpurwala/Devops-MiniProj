@@ -1,6 +1,5 @@
 name: MLOps CI/CD Pipeline
 
-# Trigger the workflow on push to the 'main' branch
 on:
   push:
     branches: [ "main" ]
@@ -13,17 +12,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          # We need to fetch all history for SonarCloud analysis
           fetch-depth: 0
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
-          # We use the secrets we set up in GitHub
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          # We pass the org and project key from our secrets
           args: >
             -Dsonar.organization=${{ secrets.SONAR_ORG }}
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
@@ -34,59 +30,34 @@ jobs:
     runs-on: ubuntu-latest
     needs: code_scan
     steps:
+      # Step 1: Check out your GitHub repo, including LFS files
       - uses: actions/checkout@v3
         with:
-          fetch-depth: 0
-          lfs: true # <-- This is important
+          lfs: true
+          fetch-depth: 0 # Fetch all history
 
+      # Step 2: Push this repo to your HuggingFace Space
       - name: Push to Hugging Face Hub
         env:
           HF_USERNAME: ${{ secrets.HF_USERNAME }}
           SPACE_NAME: ${{ secrets.SPACE_NAME }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          echo "Setting up Git LFS..."
-          git lfs install
+          echo "Adding HuggingFace Space as a git remote..."
+          # Add the HF Space as a remote named "space"
+          git remote add space "https://OAuth:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/${SPACE_NAME}"
           
-          echo "Pulling LFS files..."
-          # --- THIS IS THE NEW, CRITICAL COMMAND ---
-          # This forces git to download the *real* .pkl file
-          git lfs pull
-          # ----------------------------------------
+          echo "Force-pushing main branch to HuggingFace..."
+          # Force-push your local main branch to the 'main' branch on the HF Space
+          # The 'main:main' part maps your local 'main' to the remote 'main'
+          git push --force space main:main
           
-          echo "Cloning HuggingFace Space: ${SPACE_NAME}"
-          git clone "https://OAuth:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/${SPACE_NAME}" "${SPACE_NAME}"
-          
-          echo "Syncing project files to cloned repo..."
-          rsync -av --delete --exclude=".git*" --exclude=".github*" --exclude="${SPACE_NAME}" . ./${SPACE_NAME}/
-          
-          cd "${SPACE_NAME}"
-          echo "Inside cloned repo directory."
-
-          git config --global user.email "action@github.com"
-          git config --global user.name "GitHub Action"
-          
-          echo "Tracking .pkl files with LFS..."
-          git lfs track "*.pkl"
-          git add .gitattributes
-          
-          echo "Adding all changes..."
-          git add .
-          
-          if ! git diff-index --quiet HEAD; then
-            echo "Changes detected, committing and pushing..."
-            git commit -m "Deploy from GitHub Actions (commit: ${GITHUB_SHA})"
-            git push
-            echo "Changes pushed to HuggingFace."
-          else
-            echo "No file changes detected, nothing to push."
-          fi
+          echo "Deployment push complete."
 
   # Job 3: Run the Selenium Smoke Test
   smoke_test:
     name: Smoke Test
     runs-on: ubuntu-latest
-    # This job depends on the 'deploy_to_huggingface' job
     needs: deploy_to_huggingface
     steps:
       - uses: actions/checkout@v3
