@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import numpy as np
 from flask import Flask, request, render_template, redirect, url_for
 from pycaret.classification import load_model, predict_model
 import traceback 
